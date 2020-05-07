@@ -29,6 +29,12 @@
             android:name=".BluetoothActivity"
             android:label="Bluetooth Activity">
         </activity>
+
+        <activity
+            android:name=".LiveStreamActivity"
+            android:label="Live Stream Activity">
+        </activity>
+
     </application>
 
     <uses-permission android:name="android.permission.INTERNET"></uses-permission>

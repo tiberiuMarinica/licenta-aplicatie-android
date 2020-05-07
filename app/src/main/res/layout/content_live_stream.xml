@@ -5,8 +5,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     app:layout_behavior="@string/appbar_scrolling_view_behavior"
-    tools:context=".DetectedFacesFeedActivity"
-    tools:showIn="@layout/activity_detected_faces">
+    tools:context=".LiveStreamActivity"
+    tools:showIn="@layout/activity_live_stream">
 
     <ImageView
         android:id="@+id/imageView"

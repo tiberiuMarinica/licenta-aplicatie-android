@@ -41,6 +41,18 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
+
+        Button liveStreamButton = (Button) findViewById(R.id.liveStreamButton);
+        liveStreamButton.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+
+                Intent k = new Intent(MainActivity.this, LiveStreamActivity.class);
+                startActivity(k);
+
+            }
+        });
     }
 
 }

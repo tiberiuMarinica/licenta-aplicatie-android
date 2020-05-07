@@ -44,8 +44,6 @@ public class DetectedFacesFeedActivity extends AppCompatActivity {
 
     private Thread subscribeThread;
     private ConnectionFactory factory = new ConnectionFactory();
-    private static final String QUEUE_NAME = "poze";
-    private final Handler handler = new Handler();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
