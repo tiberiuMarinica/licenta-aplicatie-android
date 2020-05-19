@@ -9,79 +9,125 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Base64;
 import android.util.Log;
 import android.widget.ImageView;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
+import android.widget.Toast;
 
-import com.rabbitmq.client.AMQP;
-import com.rabbitmq.client.CancelCallback;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
-import com.rabbitmq.client.DeliverCallback;
-import com.rabbitmq.client.Delivery;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.Socket;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeoutException;
 
 public class LiveStreamActivity extends AppCompatActivity {
 
-    public static final String EXCHANGE_COMENZI = "comenzi";
-    private Thread liveStreamReceiveThread;
-    private Thread readFromBufferThread;
+    private ExecutorService executorService = Executors.newCachedThreadPool();
     private ConnectionFactory factory = new ConnectionFactory();
-    private BlockingQueue<String> buffer = new LinkedBlockingDeque<>();
-    private Boolean startedReadingFromBuffer = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_live_stream);
+        setupConnectionFactory();
 
-        subscribe();
+        addClickListenerOnQualityRadioGroup();
+
+        RadioGroup radioGroup = (RadioGroup) findViewById(R.id.qualityRadioGroup);
+        RadioButton checkedRadioButton = (RadioButton) findViewById(radioGroup.getCheckedRadioButtonId());
+
+        sendCommand("START_LIVE_STREAM_SCRIPT", String.valueOf(checkedRadioButton.getText()));
+
+        receiveStreamFromSocketAndSendToScreen();
+    }
+
+    private void addClickListenerOnQualityRadioGroup(){
+        RadioGroup radioGroup = (RadioGroup) findViewById(R.id.qualityRadioGroup);
+
+        radioGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(RadioGroup group, int checkedId) {
+
+                RadioButton clickedRadioButton = (RadioButton) findViewById(checkedId);
+                Log.i("test", String.valueOf(clickedRadioButton.getText()));
+            }
+        });
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        liveStreamReceiveThread.interrupt();
-
+        sendCommand("STOP_LIVE_STREAM_SCRIPT");
+        executorService.shutdownNow();
     }
 
-    void subscribe() {
-        if(liveStreamReceiveThread != null){
-            Log.e("MESAJ", "AVEM DEJA SUBSCRIBE THREAD< NU MAI FACEM ALTUL");
-            return;
-        }
-        liveStreamReceiveThread = new Thread(new Runnable() {
+    private void sendCommand(String command) {
+        sendCommand(command, "");
+    }
 
-            @Override
-            public void run() {
+    private void sendCommand(String command, String parameter){
+        JSONObject json = new JSONObject();
+        try {
+            json.put("command", command);
+            json.put("parameter", parameter);
+            executorService.submit(() -> {
+
                 try {
+                    Connection connection = factory.newConnection();
+                    Channel channel = connection.createChannel();
+                    channel.basicPublish("comenzi", "comenzi", null, json.toString().getBytes("UTF-8"));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (TimeoutException e) {
+                    e.printStackTrace();
+                }
 
-                    // establish the connection with server port 5056
-                    Socket s = new Socket("192.168.100.10", 8001);
+            });
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
 
-                    // obtaining input and out streams
-                    DataInputStream dis = new DataInputStream(s.getInputStream());
+    private void receiveStreamFromSocketAndSendToScreen() {
+        executorService.submit(() -> {
 
-                    // the following loop performs the exchange of
-                    // information between client and client handler
-                    while (true)
-                    {
-                        // printing date or time as requested by client
-                        String receivedEncodedImage = dis.readUTF();
-                        sendImageToScreen(receivedEncodedImage);
-                    }
+            Socket s = null;
+            try {
+                // establish the connection with server port 5056
+                s = new Socket("192.168.100.10", 8001);
 
-                } catch (Exception e1) {
-                    Log.d("MESAJ", "Exception: " + e1.toString());
-                    e1.printStackTrace();
+                // obtaining input and out streams
+                DataInputStream dis = new DataInputStream(s.getInputStream());
+
+                // the following loop performs the exchange of
+                // information between client and client handler
+                while (true) {
+                    // printing date or time as requested by client
+                    String receivedEncodedImage = dis.readUTF();
+                    sendImageToScreen(receivedEncodedImage);
+                }
+
+
+            } catch (Exception e1) {
+                Log.e("MESAJ", "Exception: " + e1.toString(), e1);
+                e1.printStackTrace();
+            } finally {
+                try {
+                    Log.i("Test","Closing socket...");
+                    s.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
             }
-        });
 
-        liveStreamReceiveThread.start();
+        });
     }
 
     private void sendImageToScreen(String encodedImage){
@@ -95,9 +141,22 @@ public class LiveStreamActivity extends AppCompatActivity {
                 img.setImageDrawable(d);
             }
         });
-
-
     }
 
+    private void setupConnectionFactory() {
+        try {
 
+            factory.setAutomaticRecoveryEnabled(false);
+            factory.setUsername("admin");
+            factory.setPassword("admin");
+            factory.setVirtualHost("/");
+            factory.setHost("192.168.100.29");
+            factory.setPort(5672);
+            factory.setConnectionTimeout(5000);
+
+        } catch (Exception e1) {
+            e1.printStackTrace();
+        }
+
+    }
 }

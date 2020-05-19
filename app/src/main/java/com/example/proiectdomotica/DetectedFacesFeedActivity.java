@@ -7,23 +7,12 @@ import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
 import android.util.Base64;
 import android.util.Log;
-import android.view.Menu;
-import android.view.MenuItem;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.ImageView;
-import android.widget.TextView;
 
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.CancelCallback;
@@ -34,29 +23,27 @@ import com.rabbitmq.client.DeliverCallback;
 import com.rabbitmq.client.Delivery;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeoutException;
 
 public class DetectedFacesFeedActivity extends AppCompatActivity {
 
-    private Thread subscribeThread;
     private ConnectionFactory factory = new ConnectionFactory();
+    private ExecutorService executorService = Executors.newCachedThreadPool();
+    private Channel subscribeChannel;
+    private String detectedFacesDynamicQueueName;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_detected_faces);
-        Log.i("Mesag","sdfaasfdasdfasdf");
         setupConnectionFactory();
 
         DeliverCallback deliverCallback = new DeliverCallback() {
             @Override
             public void handle(String consumerTag, Delivery delivery) throws IOException {
                 String message = new String(delivery.getBody(), "UTF-8");
-                Log.i("MESAJ"," [x] Received '" + message + "'");
 
                 Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
                 // Vibrate for 500 milliseconds
@@ -86,7 +73,6 @@ public class DetectedFacesFeedActivity extends AppCompatActivity {
         }
 
     }
-
     private void changeImage(String encodedImage){
 
         ImageView img = (ImageView) findViewById(R.id.imageView);
@@ -101,48 +87,49 @@ public class DetectedFacesFeedActivity extends AppCompatActivity {
 
     }
 
-
-
-
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        subscribeThread.interrupt();
+
+        executorService.submit(() -> {
+            if(subscribeChannel != null){
+                try {
+                    subscribeChannel.queueDelete(detectedFacesDynamicQueueName);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        executorService.shutdown();
     }
 
-    void subscribe(DeliverCallback deliverCallback, CancelCallback cancelCallback) {
-        if(subscribeThread != null){
-            Log.e("MESAJ", "AVEM DEJA SUBSCRIBE THREAD< NU MAI FACEM ALTUL");
-            return;
-        }
-        subscribeThread = new Thread(new Runnable() {
+    private void subscribe(DeliverCallback deliverCallback, CancelCallback cancelCallback) {
 
-            @Override
-            public void run() {
+        executorService.submit(() -> {
+
                 try {
 
-                    //Connection connection = factory.newConnection();
-                    Connection connection = null;
+                    Connection subscribeConnection = null;
 
-                    //Channel channel = connection.createChannel();
-                    Channel channel = null;
+                    subscribeChannel = null;
 
-                    String queueName = "";
+                    detectedFacesDynamicQueueName = "";
 
                     while(true){
 
-                        if((connection == null || !connection.isOpen()) || (channel == null || !channel.isOpen())){
+                        if((subscribeConnection == null || !subscribeConnection.isOpen()) || (subscribeChannel == null || !subscribeChannel.isOpen())){
                             Log.i("MESAJ", "CONEXIUNEA E INCHISA!, refac conexiunea!");
-                            connection = factory.newConnection();
-                            channel = connection.createChannel();
-                            AMQP.Queue.DeclareOk dc = channel.queueDeclare("", true, false, true, null);
-                            queueName = dc.getQueue();
+                            subscribeConnection = factory.newConnection();
+                            subscribeChannel = subscribeConnection.createChannel();
+                            AMQP.Queue.DeclareOk dc = subscribeChannel.queueDeclare("", true, false, true, null);
+                            detectedFacesDynamicQueueName = dc.getQueue();
 
-                            channel.queueBind(queueName, "poze", "");
+                            subscribeChannel.queueBind(detectedFacesDynamicQueueName, "poze", "");
                         }
 
 
-                        channel.basicConsume(queueName, true, deliverCallback, cancelCallback);
+                        subscribeChannel.basicConsume(detectedFacesDynamicQueueName, true, deliverCallback, cancelCallback);
                         Log.i("MESAJ","Astept 1 secunda...");
                         Thread.sleep(1000);
                     }
@@ -151,20 +138,17 @@ public class DetectedFacesFeedActivity extends AppCompatActivity {
                     Log.d("MESAJ", "Exception: " + e1.toString());
                     e1.printStackTrace();
                 }
-            }
         });
-
-        subscribeThread.start();
     }
 
     private void setupConnectionFactory() {
         try {
-            System.out.println("here");
+
             factory.setAutomaticRecoveryEnabled(false);
-            factory.setUsername("dkpszkss");
-            factory.setPassword("jyZnGWIwdRy-H44cF8EqBX94g3MzJHmJ");
-            factory.setVirtualHost("dkpszkss");
-            factory.setHost("stingray.rmq.cloudamqp.com");
+            factory.setUsername("admin");
+            factory.setPassword("admin");
+            factory.setVirtualHost("/");
+            factory.setHost("192.168.100.29");
             factory.setPort(5672);
             factory.setConnectionTimeout(5000);
 
