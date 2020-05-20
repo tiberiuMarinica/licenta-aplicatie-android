@@ -31,6 +31,7 @@ public class LiveStreamActivity extends AppCompatActivity {
 
     private ExecutorService executorService = Executors.newCachedThreadPool();
     private ConnectionFactory factory = new ConnectionFactory();
+    private Socket socket;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,8 +43,6 @@ public class LiveStreamActivity extends AppCompatActivity {
 
         RadioGroup radioGroup = (RadioGroup) findViewById(R.id.qualityRadioGroup);
         RadioButton checkedRadioButton = (RadioButton) findViewById(radioGroup.getCheckedRadioButtonId());
-
-        sendCommand("START_LIVE_STREAM_SCRIPT", String.valueOf(checkedRadioButton.getText()));
 
         receiveStreamFromSocketAndSendToScreen();
     }
@@ -64,7 +63,12 @@ public class LiveStreamActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        sendCommand("STOP_LIVE_STREAM_SCRIPT");
+
+        try {
+            socket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         executorService.shutdownNow();
     }
 
@@ -83,6 +87,8 @@ public class LiveStreamActivity extends AppCompatActivity {
                     Connection connection = factory.newConnection();
                     Channel channel = connection.createChannel();
                     channel.basicPublish("comenzi", "comenzi", null, json.toString().getBytes("UTF-8"));
+                    channel.close();
+                    connection.close();
                 } catch (IOException e) {
                     e.printStackTrace();
                 } catch (TimeoutException e) {
@@ -98,13 +104,13 @@ public class LiveStreamActivity extends AppCompatActivity {
     private void receiveStreamFromSocketAndSendToScreen() {
         executorService.submit(() -> {
 
-            Socket s = null;
+            socket = null;
             try {
                 // establish the connection with server port 5056
-                s = new Socket("192.168.100.10", 8001);
+                socket = new Socket("192.168.100.10", 8001);
 
                 // obtaining input and out streams
-                DataInputStream dis = new DataInputStream(s.getInputStream());
+                DataInputStream dis = new DataInputStream(socket.getInputStream());
 
                 // the following loop performs the exchange of
                 // information between client and client handler
@@ -112,26 +118,22 @@ public class LiveStreamActivity extends AppCompatActivity {
                     // printing date or time as requested by client
                     String receivedEncodedImage = dis.readUTF();
                     sendImageToScreen(receivedEncodedImage);
+
                 }
 
 
             } catch (Exception e1) {
                 Log.e("MESAJ", "Exception: " + e1.toString(), e1);
                 e1.printStackTrace();
-            } finally {
-                try {
-                    Log.i("Test","Closing socket...");
-                    s.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
             }
 
         });
     }
 
     private void sendImageToScreen(String encodedImage){
-
+        if(encodedImage.equals("")){
+            return;
+        }
         ImageView img = (ImageView) findViewById(R.id.imageView);
         byte[] decodedString = Base64.decode(encodedImage, Base64.DEFAULT);
         Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
