@@ -11,7 +11,6 @@ import android.util.Log;
 import android.widget.ImageView;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
-import android.widget.Toast;
 
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
@@ -134,7 +133,7 @@ public class LiveStreamActivity extends AppCompatActivity {
         if(encodedImage.equals("")){
             return;
         }
-        ImageView img = (ImageView) findViewById(R.id.imageView);
+        ImageView img = (ImageView) findViewById(R.id.mainImage);
         byte[] decodedString = Base64.decode(encodedImage, Base64.DEFAULT);
         Bitmap decodedByte = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
         Drawable d = new BitmapDrawable(getResources(), decodedByte);
