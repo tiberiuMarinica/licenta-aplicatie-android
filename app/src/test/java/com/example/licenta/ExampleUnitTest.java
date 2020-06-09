@@ -1,4 +1,4 @@
-package com.example.proiectdomotica;
+package com.example.licenta;
 
 import org.junit.Test;
 

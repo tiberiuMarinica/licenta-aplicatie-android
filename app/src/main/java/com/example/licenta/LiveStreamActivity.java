@@ -1,4 +1,4 @@
-package com.example.proiectdomotica;
+package com.example.licenta;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -64,7 +64,10 @@ public class LiveStreamActivity extends AppCompatActivity {
         super.onDestroy();
 
         try {
-            socket.close();
+            if(socket != null){
+                socket.close();
+            }
+
         } catch (IOException e) {
             e.printStackTrace();
         }

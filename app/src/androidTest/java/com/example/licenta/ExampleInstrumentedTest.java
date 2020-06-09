@@ -1,4 +1,4 @@
-package com.example.proiectdomotica;
+package com.example.licenta;
 
 import android.content.Context;
 import android.support.test.InstrumentationRegistry;

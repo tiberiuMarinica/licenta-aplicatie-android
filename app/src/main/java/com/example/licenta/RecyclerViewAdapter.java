@@ -1,4 +1,4 @@
-package com.example.proiectdomotica;
+package com.example.licenta;
 
 import android.content.Context;
 import android.content.ContextWrapper;
@@ -13,7 +13,6 @@ import android.widget.ImageView;
 import com.squareup.picasso.Picasso;
 
 import java.io.File;
-import java.io.FilenameFilter;
 import java.util.ArrayList;
 import java.util.List;
 
