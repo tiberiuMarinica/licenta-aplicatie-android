@@ -1,7 +1,13 @@
 package com.example.licenta;
 
+import android.app.Activity;
+import android.app.Notification;
+import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.ContextWrapper;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -13,6 +19,9 @@ import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
+import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.NotificationManagerCompat;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.LinearLayoutManager;
@@ -45,31 +54,17 @@ import java.util.concurrent.Executors;
 
 public class DetectedFacesFeedActivity extends AppCompatActivity implements RecyclerViewAdapter.ItemClickListener {
 
-    private ConnectionFactory factory = new ConnectionFactory();
-    private ExecutorService executorService = Executors.newCachedThreadPool();
-    private Channel subscribeChannel;
-    private String detectedFacesDynamicQueueName;
-
     private RecyclerViewAdapter recyclerViewAdapter;
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_detected_faces);
-        setupConnectionFactory();
 
-        System.out.println(getFrequencyInSecondsFromPreferences());
 
-        DeliverCallback deliverCallback = getDeliverCallback();
-
-        CancelCallback cancelCallback = getCancelCallback();
-
-        try {
-            subscribe(deliverCallback, cancelCallback);
-        }catch(Exception e){
-            Log.e("MESAJ", e.toString());
-            e.printStackTrace();
-        }
+        LocalBroadcastManager.getInstance(this).registerReceiver(getBroadcastReceiver(), new IntentFilter("PersonDetectionNotification"));
 
         // set up the RecyclerView
         RecyclerView recyclerView = findViewById(R.id.imageList);
@@ -90,7 +85,28 @@ public class DetectedFacesFeedActivity extends AppCompatActivity implements Recy
         ItemTouchHelper itemTouchHelper = getItemTouchHelper();
 
         itemTouchHelper.attachToRecyclerView(recyclerView);
+
+        if(recyclerViewAdapter.getItemCount() > 0){
+            ImageView img = (ImageView) findViewById(R.id.mainImage);
+            Picasso.with(getApplicationContext()).load(recyclerViewAdapter.getItem(recyclerViewAdapter.getItemCount() - 1)).into(img);
+        }
     }
+
+    private BroadcastReceiver getBroadcastReceiver() {
+
+        return new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                String encodedImage = intent.getStringExtra("encodedImage");
+                changeMainImage(encodedImage);
+                saveImageToStorage(encodedImage);
+
+            }
+        };
+
+    }
+
+
 
     private ItemTouchHelper getItemTouchHelper() {
         return new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.UP | ItemTouchHelper.DOWN) {
@@ -106,77 +122,6 @@ public class DetectedFacesFeedActivity extends AppCompatActivity implements Recy
                     Toast.makeText(getApplicationContext(), "on Swipe", Toast.LENGTH_SHORT).show();
                 }
             });
-    }
-
-    private CancelCallback getCancelCallback() {
-        return consumerTag -> Log.i("MESAJ"," [x] Received '" + consumerTag + "'");
-    }
-
-    private DeliverCallback getDeliverCallback() {
-        return (consumerTag, delivery) -> {
-            String message = new String(delivery.getBody(), "UTF-8");
-
-            Integer frequencyInSeconds = getFrequencyInSecondsFromPreferences();
-
-            Long lastNotificationTimestamp = getLastNotificationTimestampFromPreferences();
-            Long nowTimestamp = new Date().getTime();
-
-            if(nowTimestamp - lastNotificationTimestamp > frequencyInSeconds * 1000){
-                Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-                // Vibrate for 500 milliseconds
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    v.vibrate(VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE));
-                } else {
-                    //deprecated in API 26
-                    v.vibrate(500);
-                }
-
-                changeMainImage(message);
-
-                saveImageToStorage(message);
-
-                saveIntoSharedPreferences("lastNotificationTimestamp", nowTimestamp);
-            }
-        };
-    }
-
-    private void saveIntoSharedPreferences(String key, Long value) {
-        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
-        SharedPreferences.Editor editor = sharedPref.edit();
-        editor.putString(key, value.toString());
-        editor.commit();
-    }
-
-    private Long getLastNotificationTimestampFromPreferences(){
-        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
-        String lastNotificationTimestampString = sharedPref.getString("lastNotificationTimestamp", null);
-
-        Long lastNotificationTimestamp;
-        if(lastNotificationTimestampString == null){
-            lastNotificationTimestamp = 0l;
-        }else{
-            lastNotificationTimestamp = Long.parseLong(lastNotificationTimestampString);
-        }
-
-        return lastNotificationTimestamp;
-    }
-
-    private Integer getFrequencyInSecondsFromPreferences() {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        int selectedFrequency = Integer.valueOf(prefs.getString("frequency", "1"));
-        switch (selectedFrequency){
-            case 0:
-                System.out.println("low");
-                return 60;
-            case 1:
-                System.out.println("medium");
-                return 30;
-            case 2:
-                System.out.println("high");
-                return 1;
-            default:
-                return 30;
-        }
     }
 
     @Override
@@ -231,74 +176,6 @@ public class DetectedFacesFeedActivity extends AppCompatActivity implements Recy
     @Override
     protected void onDestroy() {
         super.onDestroy();
-
-        executorService.submit(() -> {
-            if(subscribeChannel != null){
-                try {
-                    subscribeChannel.queueDelete(detectedFacesDynamicQueueName);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-
-        executorService.shutdown();
     }
-
-    private void subscribe(DeliverCallback deliverCallback, CancelCallback cancelCallback) {
-
-        executorService.submit(() -> {
-
-                try {
-
-                    Connection subscribeConnection = null;
-
-                    subscribeChannel = null;
-
-                    detectedFacesDynamicQueueName = "";
-
-                    while(true){
-
-                        if((subscribeConnection == null || !subscribeConnection.isOpen()) || (subscribeChannel == null || !subscribeChannel.isOpen())){
-                            Log.i("MESAJ", "CONEXIUNEA E INCHISA!, refac conexiunea!");
-                            subscribeConnection = factory.newConnection();
-                            subscribeChannel = subscribeConnection.createChannel();
-                            AMQP.Queue.DeclareOk dc = subscribeChannel.queueDeclare("", true, false, true, null);
-                            detectedFacesDynamicQueueName = dc.getQueue();
-
-                            subscribeChannel.queueBind(detectedFacesDynamicQueueName, "poze", "");
-                        }
-
-
-                        subscribeChannel.basicConsume(detectedFacesDynamicQueueName, true, deliverCallback, cancelCallback);
-                        Log.i("MESAJ","Astept 1 secunda...");
-                        Thread.sleep(1000);
-                    }
-
-                } catch (Exception e1) {
-                    Log.d("MESAJ", "Exception: " + e1.toString());
-                    e1.printStackTrace();
-                }
-        });
-    }
-
-    private void setupConnectionFactory() {
-        try {
-
-            factory.setAutomaticRecoveryEnabled(false);
-            factory.setUsername("admin");
-            factory.setPassword("admin");
-            factory.setVirtualHost("/");
-            factory.setHost("192.168.100.29");
-            factory.setPort(5672);
-            factory.setConnectionTimeout(5000);
-
-        } catch (Exception e1) {
-            e1.printStackTrace();
-        }
-
-    }
-
-
 
 }

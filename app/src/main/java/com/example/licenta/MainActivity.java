@@ -23,6 +23,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String CHANNEL_ID = "canal";
 
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -50,19 +51,12 @@ public class MainActivity extends AppCompatActivity {
 
         createNotificationChannel();
 
-        Bitmap myBitmap = null;
-        Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_launcher_background)
-                .setContentTitle("Alerta!")
-                .setContentText("Persoana detectata de camera video")
-                .setStyle(new NotificationCompat.BigPictureStyle())
-                .build();
-                       // .bigPicture(myBitmap))
-        NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
+        startRabbitMQService();
+    }
 
-        // notificationId is a unique int for each notification that you must define
-        notificationManager.notify(1, notification);
-
+    private void startRabbitMQService(){
+        Intent i = new Intent(getApplicationContext(), RabbitMQListenerService.class);
+        getApplicationContext().startService(i);
     }
 
     private void createNotificationChannel() {
