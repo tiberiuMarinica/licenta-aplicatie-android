@@ -30,6 +30,7 @@ import com.rabbitmq.client.DeliverCallback;
 
 import java.io.IOException;
 import java.util.Date;
+import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -169,7 +170,7 @@ public class RabbitMQListenerService extends Service {
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(getApplicationContext());
 
         // notificationId is a unique int for each notification that you must define
-        notificationManager.notify(1, notification);
+        notificationManager.notify(new Random().nextInt(), notification);
     }
 
     private void subscribe(DeliverCallback deliverCallback, CancelCallback cancelCallback) {

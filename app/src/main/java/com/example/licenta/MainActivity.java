@@ -34,10 +34,10 @@ public class MainActivity extends AppCompatActivity {
             startActivity(new Intent(MainActivity.this, DetectedFacesFeedActivity.class));
         });
 
-        Button bluetoothSettingsButton = (Button) findViewById(R.id.bluetoothButton);
-        bluetoothSettingsButton.setOnClickListener(v -> {
-            startActivity(new Intent(MainActivity.this, BluetoothActivity.class));
-        });
+//        Button bluetoothSettingsButton = (Button) findViewById(R.id.bluetoothButton);
+//        bluetoothSettingsButton.setOnClickListener(v -> {
+//            startActivity(new Intent(MainActivity.this, BluetoothActivity.class));
+//        });
 
         Button liveStreamButton = (Button) findViewById(R.id.liveStreamButton);
         liveStreamButton.setOnClickListener(v -> {

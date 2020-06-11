@@ -56,13 +56,10 @@ public class DetectedFacesFeedActivity extends AppCompatActivity implements Recy
 
     private RecyclerViewAdapter recyclerViewAdapter;
 
-
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_detected_faces);
-
 
         LocalBroadcastManager.getInstance(this).registerReceiver(getBroadcastReceiver(), new IntentFilter("PersonDetectionNotification"));
 
@@ -105,8 +102,6 @@ public class DetectedFacesFeedActivity extends AppCompatActivity implements Recy
         };
 
     }
-
-
 
     private ItemTouchHelper getItemTouchHelper() {
         return new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.UP | ItemTouchHelper.DOWN) {
