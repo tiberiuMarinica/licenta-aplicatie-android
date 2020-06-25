@@ -1,11 +1,11 @@
 <resources>
-    <string name="app_name">Aplicatie Licenta</string>
+    <string name="app_name">Aplicație Licență</string>
     <string name="action_settings">Setari</string>
 
     <string-array name="pref_frecventa_notificari_entries">
-        <item>Mica (1 notificare / minut)</item>
+        <item>Mică (1 notificare / minut)</item>
         <item>Medie (1 notificare / 30 secunde)</item>
-        <item>Mare (1 notificare / secunda)</item>
+        <item>Mare (1 notificare / secundă)</item>
     </string-array>
 
     <string-array name="pref_frecventa_notificari_values">

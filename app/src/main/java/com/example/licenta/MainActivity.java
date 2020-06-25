@@ -1,23 +1,12 @@
 package com.example.licenta;
 
-import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.Intent;
-import android.graphics.Bitmap;
 import android.os.Build;
 import android.os.Bundle;
-import android.support.v4.app.NotificationCompat;
-import android.support.v4.app.NotificationManagerCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
-import android.view.Menu;
-import android.view.MenuItem;
-import android.view.View;
 import android.widget.Button;
-
-import java.time.Instant;
-import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -33,11 +22,6 @@ public class MainActivity extends AppCompatActivity {
         detectedFacesButton.setOnClickListener(v -> {
             startActivity(new Intent(MainActivity.this, DetectedFacesFeedActivity.class));
         });
-
-//        Button bluetoothSettingsButton = (Button) findViewById(R.id.bluetoothButton);
-//        bluetoothSettingsButton.setOnClickListener(v -> {
-//            startActivity(new Intent(MainActivity.this, BluetoothActivity.class));
-//        });
 
         Button liveStreamButton = (Button) findViewById(R.id.liveStreamButton);
         liveStreamButton.setOnClickListener(v -> {

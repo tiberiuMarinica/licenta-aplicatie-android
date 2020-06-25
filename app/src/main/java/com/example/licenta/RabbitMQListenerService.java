@@ -109,7 +109,7 @@ public class RabbitMQListenerService extends Service {
 
     }
 
-    public static CancelCallback getCancelCallback() {
+    public CancelCallback getCancelCallback() {
         return consumerTag -> Log.i("MESAJ"," [x] Received '" + consumerTag + "'");
     }
 
@@ -160,8 +160,8 @@ public class RabbitMQListenerService extends Service {
         Bitmap myBitmap = decodedByte;
         Notification notification = new NotificationCompat.Builder(getApplicationContext(), CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_launcher_background)
-                .setContentTitle("Alerta!")
-                .setContentText("Persoana detectata de camera video")
+                .setContentTitle("Alertă!")
+                .setContentText("Persoană detectată de camera video")
                 .setStyle(new NotificationCompat.BigPictureStyle().bigPicture(myBitmap))
                 .setContentIntent(pendingIntent)
                 .setAutoCancel(true)

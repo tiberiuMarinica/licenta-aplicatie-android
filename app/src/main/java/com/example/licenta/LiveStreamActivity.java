@@ -1,5 +1,6 @@
 package com.example.licenta;
 
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
@@ -8,9 +9,12 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Base64;
 import android.util.Log;
+import android.widget.Button;
+import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
+import android.widget.ToggleButton;
 
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
@@ -20,6 +24,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.DataInputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.concurrent.ExecutorService;
@@ -40,10 +45,30 @@ public class LiveStreamActivity extends AppCompatActivity {
 
         addClickListenerOnQualityRadioGroup();
 
-        RadioGroup radioGroup = (RadioGroup) findViewById(R.id.qualityRadioGroup);
-        RadioButton checkedRadioButton = (RadioButton) findViewById(radioGroup.getCheckedRadioButtonId());
-
         receiveStreamFromSocketAndSendToScreen();
+
+        ToggleButton toggleDoorLockButton = (ToggleButton) findViewById(R.id.doorLockToggle);
+        toggleDoorLockButton.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked) {
+                // The toggle is enabled
+                sendCommand("LOCK_DOOR");
+            } else {
+                // The toggle is disabled
+                sendCommand("UNLOCK_DOOR");
+            }
+        });
+
+        ToggleButton toggleAlarmButton = (ToggleButton) findViewById(R.id.alarmToggle);
+        toggleAlarmButton.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked) {
+                // The toggle is enabled
+                sendCommand("START_ALARM");
+            } else {
+                // The toggle is disabled
+                sendCommand("STOP_ALARM");
+            }
+        });
+
     }
 
     private void addClickListenerOnQualityRadioGroup(){
@@ -55,6 +80,23 @@ public class LiveStreamActivity extends AppCompatActivity {
 
                 RadioButton clickedRadioButton = (RadioButton) findViewById(checkedId);
                 Log.i("test", String.valueOf(clickedRadioButton.getText()));
+
+                String param = "";
+                switch (String.valueOf(clickedRadioButton.getText())){
+                    case "Mica":
+                        param = "low";
+                        break;
+                    case "Medie":
+                        param = "medium";
+                        break;
+                    case "Mare":
+                        param = "high";
+                        break;
+                    default:
+                        param = "medium";
+                }
+
+                sendCommand("CHANGE_LIVE_STREAM_QUALITY", param);
             }
         });
     }
@@ -81,7 +123,7 @@ public class LiveStreamActivity extends AppCompatActivity {
     private void sendCommand(String command, String parameter){
         JSONObject json = new JSONObject();
         try {
-            json.put("command", command);
+            json.put("name", command);
             json.put("parameter", parameter);
             executorService.submit(() -> {
 
@@ -118,8 +160,13 @@ public class LiveStreamActivity extends AppCompatActivity {
                 // information between client and client handler
                 while (true) {
                     // printing date or time as requested by client
-                    String receivedEncodedImage = dis.readUTF();
-                    sendImageToScreen(receivedEncodedImage);
+                    try {
+                        String receivedEncodedImage = dis.readUTF();
+                        sendImageToScreen(receivedEncodedImage);
+                    }catch(EOFException eofException){
+                        Log.e("Error", eofException.getMessage(), eofException);
+                    }
+
 
                 }
 

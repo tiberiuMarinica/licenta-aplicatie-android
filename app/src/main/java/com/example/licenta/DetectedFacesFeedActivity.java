@@ -114,7 +114,6 @@ public class DetectedFacesFeedActivity extends AppCompatActivity implements Recy
                 @Override
                 public void onSwiped(final RecyclerView.ViewHolder viewHolder, int swipeDir) {
                     recyclerViewAdapter.removeImage(viewHolder.getAdapterPosition());
-                    Toast.makeText(getApplicationContext(), "on Swipe", Toast.LENGTH_SHORT).show();
                 }
             });
     }

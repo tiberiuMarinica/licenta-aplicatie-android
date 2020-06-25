@@ -3,7 +3,7 @@
 
 <ListPreference
     android:key="frequency"
-    android:title="Frecventa Notificari"
+    android:title="Frecvență Notificări"
     android:entries="@array/pref_frecventa_notificari_entries"
     android:defaultValue="1"
     android:entryValues="@array/pref_frecventa_notificari_values"/>
